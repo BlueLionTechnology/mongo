@@ -51,11 +51,11 @@ jobs:
       - name: BUILD DOCKER IMAGE (PRODUCTION)
         if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
         run: |
-          cd docker build -t ${{ steps.string.outputs.lowercase }} .
+          docker build -t ${{ steps.string.outputs.lowercase }} .
       - name: BUILD DOCKER IMAGE (STAGING)
         if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
         run: |
-          cd docker build -t ${{ steps.string.outputs.lowercase }}-dev .
+          docker build -t ${{ steps.string.outputs.lowercase }}-dev .
       # - name: PWD
       #   run: pwd
       # - name: List files
