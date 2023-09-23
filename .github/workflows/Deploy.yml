@@ -1,0 +1,91 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "*" # matches every branch
+      - "*/*" # matches every branch containing a single '/'
+  push:
+    branches:
+      - master
+      - main
+      - devel
+      - develop
+      - development
+
+jobs:
+  build:
+    runs-on: self-hosted
+    # runs-on: ubuntu-latest
+
+    # runs all of the steps inside the specified container rather than on the VM host.
+    # Because of this the network configuration changes from host based network to a container network.
+    # container:
+    #   image: node:latest
+
+    # services:
+    #   mongo:
+    #     image: mongo:latest
+    #     ports:
+    #       - 27017:27017
+
+    strategy:
+      matrix:
+        node-version: [19.x] #[16.x]
+
+    steps:
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@main
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org
+      - name: PRINT LS
+        run: ls
+      - name: Checkout
+        uses: actions/checkout@main
+      - id: string
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ github.event.repository.name }}
+      - name: BUILD DOCKER IMAGE (PRODUCTION)
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
+        run: |
+          cd .. && docker build -t ${{ steps.string.outputs.lowercase }} .
+      - name: BUILD DOCKER IMAGE (STAGING)
+        if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
+        run: |
+          cd .. && docker build -t ${{ steps.string.outputs.lowercase }}-dev .
+      # - name: PWD
+      #   run: pwd
+      # - name: List files
+      #   run: ls
+      # - name: List files
+      #   run: ls ../
+      - name: RUN DOCKER IMAGE (PRODUCTION)
+        if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
+        run: |
+          docker tag ${{ steps.string.outputs.lowercase }} 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}
+          docker push 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}
+        # run: docker push ${{ steps.string.outputs.lowercase }}
+      - name: RUN DOCKER IMAGE (STAGING)
+        if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
+        run: |
+          docker tag ${{ steps.string.outputs.lowercase }}-dev 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}-dev
+          docker push 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}-dev
+        # run: docker push ${{ steps.string.outputs.lowercase }}-dev
+      - name: RUN DOCKER PRUNE
+        run: |
+          docker system prune --all --force
+          docker image prune -a --force
+      # - name: Kill pod (PRODUCTION)
+      #   if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
+      #   run: |
+      #     kubectl delete pods -l app=${{ steps.string.outputs.lowercase }}-app
+      # - name: Kill pod (STAGING)
+      #   if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
+      #   run: |
+      #     kubectl delete pods -l app=${{ steps.string.outputs.lowercase }}-app-dev
+      - name: Delete folder
+        run: |
+          rm -rf ../${{ github.event.repository.name }}/*
