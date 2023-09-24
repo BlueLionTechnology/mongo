@@ -74,10 +74,12 @@ jobs:
           buildah tag ${{ steps.string.outputs.lowercase }}-dev 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}-dev
           buildah push --tls-verify=false 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}-dev
         # run: buildah push ${{ steps.string.outputs.lowercase }}-dev
-      - name: RUN DOCKER PRUNE
+      - name: RUN DOCKER PRUNE CONTAINERS
         run: |
-          for container in $(buildah containers --filter 'exited' --quiet); do buildah rm $container; done
-          for image in $(buildah images --filter 'dangling' --quiet); do buildah rmi $image; done
+          for container in $(buildah containers --quiet); do status=$(buildah inspect --type container $container --format '{{.State.Status}}') && [ "$status" == "exited" ] && buildah rm $container; done
+      - name: RUN DOCKER PRUNE IMAGES
+        run: |
+          for image in $(buildah images --filter "dangling=true" --quiet); do buildah rmi $image; done
       # - name: Kill pod (PRODUCTION)
       #   if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
       #   run: |
