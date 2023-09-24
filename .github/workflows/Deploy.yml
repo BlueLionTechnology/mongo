@@ -51,11 +51,11 @@ jobs:
       - name: BUILD DOCKER IMAGE (PRODUCTION)
         if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
         run: |
-          docker build -t ${{ steps.string.outputs.lowercase }} .
+          buildah build -t ${{ steps.string.outputs.lowercase }} .
       - name: BUILD DOCKER IMAGE (STAGING)
         if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
         run: |
-          docker build -t ${{ steps.string.outputs.lowercase }}-dev .
+          buildah build -t ${{ steps.string.outputs.lowercase }}-dev .
       # - name: PWD
       #   run: pwd
       # - name: List files
@@ -65,19 +65,19 @@ jobs:
       - name: RUN DOCKER IMAGE (PRODUCTION)
         if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
         run: |
-          docker tag ${{ steps.string.outputs.lowercase }} 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}
-          docker push 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}
-        # run: docker push ${{ steps.string.outputs.lowercase }}
+          buildah tag ${{ steps.string.outputs.lowercase }} 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}
+          buildah push --tls-verify=false 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}
+        # run: buildah push ${{ steps.string.outputs.lowercase }}
       - name: RUN DOCKER IMAGE (STAGING)
         if: ${{ github.ref_name == 'devel' ||  github.ref_name == 'develop' || github.ref_name == 'development' }}
         run: |
-          docker tag ${{ steps.string.outputs.lowercase }}-dev 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}-dev
-          docker push 10.43.253.39:5000/${{ steps.string.outputs.lowercase }}-dev
-        # run: docker push ${{ steps.string.outputs.lowercase }}-dev
+          buildah tag ${{ steps.string.outputs.lowercase }}-dev 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}-dev
+          buildah push --tls-verify=false 10.43.32.58:5000/${{ steps.string.outputs.lowercase }}-dev
+        # run: buildah push ${{ steps.string.outputs.lowercase }}-dev
       - name: RUN DOCKER PRUNE
         run: |
-          docker system prune --all --force
-          docker image prune -a --force
+          for container in $(buildah containers --filter 'exited' --quiet); do buildah rm $container; done
+          for image in $(buildah images --filter 'dangling' --quiet); do buildah rmi $image; done
       # - name: Kill pod (PRODUCTION)
       #   if: ${{ github.ref_name == 'main' || github.ref_name == 'master' }}
       #   run: |

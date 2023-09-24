@@ -1,4 +1,4 @@
-FROM mongo:latest
+FROM docker.io/mongo:latest
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN true
